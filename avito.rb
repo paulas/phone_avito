@@ -1,6 +1,7 @@
 # encoding: utf-8
 require 'rubygems'
 require 'curb'
+require 'chunky_png'
 
 class Avito
 	attr_accessor :url, :path
@@ -93,5 +94,69 @@ class Avito
 	end
 end
 
+=begin
 avito = Avito.new '/novocheboksarsk/zapchasti_i_aksessuary/turbina_gt1852v_garret_559224246'
 p avito.get_phone
+=end
+
+png = ChunkyPNG::Image.from_file 'phones/559224246.png'
+w = png.width
+h = png.height
+
+ar_png = (0...w).collect { Array.new(h) }
+
+w.times do |x|
+	h.times do |y|
+		ar_png[x][y] = (png[x, y] == 4294967040) ? 0 : 1
+	end
+end
+
+# разобьем по цифрам
+digits = []
+new_digit = true
+num = 0
+ar_png.each_with_index do |row|
+	if row.inject { |sum, x| sum + x } < 1
+		unless new_digit
+			num += 1
+			new_digit = true
+		end
+	else
+		new_digit = false
+		digits.push [] unless digits[num].is_a? Array
+		digits[num].push(row)
+	end
+end
+
+# повернем все цифры
+digits.each_with_index do |digit, index_digit|
+	ar = []
+	r = digit[0].length
+	c = digit.length
+	(0...r).collect{ ar.push Array.new(c) }
+
+	(0...c).collect do |col|
+		(0...r).collect do |row|
+			ar[row][col] = digit[col][row]
+		end
+	end
+	# удалим лишние строки
+	new_ar = []
+	ar.each do |row|
+		new_ar.push row unless row.inject { |sum, x| sum + x } < 2
+	end
+	digits[index_digit] = new_ar
+end
+
+digits.each do |digit|
+	if digit.size > 3
+		digit.each do |row|
+			row.each do |v|
+				printf v == 1 ? '#' : ' '
+			end
+			p ''
+		end
+		p ' '*10
+	end
+end
+
